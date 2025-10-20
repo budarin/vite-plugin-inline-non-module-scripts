@@ -1,2 +1,182 @@
-# vite-plugin-inline-non-module-scripts
-Plugin for inlining non-module scripts into html
+# Vite Plugin Inline Non-Module Scripts
+
+Vite плагин для автоматической обработки не-модульных JavaScript скриптов с инлайн-вставкой минифицированного кода.
+
+## Проблема
+
+Vite по умолчанию **не обрабатывает** обычные JavaScript скрипты (не модули) в HTML файлах. Такие скрипты часто используются для:
+
+- 🔧 Инициализации данных на странице до загрузки модулей
+- ⚡ Немедленной обработки критически важных данных
+- 🎯 Настройки глобальных переменных и конфигурации
+- 📊 Аналитики и трекинга, которые должны сработать сразу
+
+Но Vite их игнорирует, что означает:
+
+- ❌ Скрипты не хэшируются в production сборке
+- ❌ Пути к скриптам не обновляются автоматически
+- ❌ Скрипты не проходят через Vite pipeline для оптимизации
+- ❌ Нет поддержки hot reload для обычных скриптов
+
+## Решение
+
+Этот плагин автоматически находит все локальные не-модульные скрипты в HTML и:
+
+- ✅ **В dev режиме**: скрипты доступны по оригинальным путям
+- ✅ **В prod режиме**: скрипты минифицируются и инлайнятся в HTML
+- ✅ **Автоматическое обнаружение**: находит все `<script>` теги без `type="module"`
+- ✅ **Исключение внешних скриптов**: игнорирует CDN и внешние ссылки
+
+## 📦 Установка
+
+```bash
+npm install @budarin/vite-plugin-inline-non-module-scripts
+# или
+pnpm add @budarin/vite-plugin-inline-non-module-scripts
+# или
+yarn add @budarin/vite-plugin-inline-non-module-scripts
+```
+
+## 🔧 Использование
+
+### Базовое использование
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+import { vitePluginInlineNonModuleScripts } from '@budarin/vite-plugin-inline-non-module-scripts';
+
+export default defineConfig({
+    plugins: [vitePluginInlineNonModuleScripts()],
+});
+```
+
+### Альтернативный импорт (дефолтный экспорт)
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+import vitePluginInlineNonModuleScripts from '@budarin/vite-plugin-inline-non-module-scripts';
+
+export default defineConfig({
+    plugins: [vitePluginInlineNonModuleScripts()],
+});
+```
+
+### С настройками
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+import { vitePluginInlineNonModuleScripts } from '@budarin/vite-plugin-inline-non-module-scripts';
+
+export default defineConfig({
+    plugins: [
+        vitePluginInlineNonModuleScripts({
+            minify: true, // Включить минификацию (по умолчанию: false)
+            htmlPath: 'src/index.html', // Путь к HTML файлу (по умолчанию: 'index.html')
+        }),
+    ],
+});
+```
+
+## ⚙️ Настройки
+
+```typescript
+interface VitePluginInlineNonModuleScriptsOptions {
+    minify?: boolean; // Включить минификацию (по умолчанию: использует настройку build.minify из конфига Vite)
+    htmlPath?: string; // Путь к HTML файлу (по умолчанию: 'index.html')
+}
+```
+
+## 📝 Как это работает
+
+### Настройка минификации
+
+Плагин автоматически определяет нужно ли минифицировать скрипты по следующему приоритету:
+
+1. **Опция плагина** `minify` - если явно указана
+2. **Настройка Vite** `build.minify` - если опция плагина не указана
+3. **По умолчанию** - минификация включена (если `build.minify !== false`)
+
+```typescript
+// Пример 1: Явно отключить минификацию
+vitePluginInlineNonModuleScripts({ minify: false });
+
+// Пример 2: Использовать настройку из конфига Vite
+vitePluginInlineNonModuleScripts(); // Следует build.minify из vite.config.ts
+
+// Пример 3: Явно включить минификацию
+vitePluginInlineNonModuleScripts({ minify: true });
+```
+
+### До обработки
+
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>My App</title>
+    </head>
+    <body>
+        <script src="/src/ui/helpers/splash-screen/splash.js"></script>
+        <script type="module" src="/src/main.js"></script>
+    </body>
+</html>
+```
+
+### После обработки
+
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>My App</title>
+    </head>
+    <body>
+        <script>
+            console.log('Hello from minified script!');
+            window.appConfig = { version: '1.0.0', debug: false };
+        </script>
+        <script type="module" src="/assets/main-abc123.js"></script>
+    </body>
+</html>
+```
+
+## 🎯 Что обрабатывается
+
+Плагин находит и обрабатывает скрипты, которые:
+
+- ✅ Имеют атрибут `src`
+- ✅ НЕ имеют `type="module"`
+- ✅ НЕ являются внешними (не начинаются с `http://`, `https://`, `//`)
+- ✅ Являются локальными файлами
+
+### Примеры
+
+```html
+<!-- ✅ Обрабатывается -->
+<script src="/src/utils/helper.js"></script>
+<script src="./local-script.js"></script>
+<script src="assets/script.js" defer></script>
+
+<!-- ❌ НЕ обрабатывается -->
+<script type="module" src="/src/main.js"></script>
+<script src="https://cdn.example.com/script.js"></script>
+<script src="//cdn.example.com/script.js"></script>
+<script>
+    console.log('inline script');
+</script>
+```
+
+## 📄 Лицензия
+
+MIT License - см. файл [LICENSE](LICENSE) для деталей.
+
+## 👨‍💻 Автор
+
+**Budarin Vadim** - [@budarin](https://github.com/budarin)
+
+---
+
+⭐ **Если плагин полезен, поставьте звезду!** ⭐
