@@ -1,4 +1,4 @@
-# Vite Plugin Inline Non-Module Scripts
+# vite-plugin-inline-non-module-scripts
 
 Vite плагин для автоматической обработки не-модульных JavaScript скриптов (включая инлайн-скрипты) с инлайн-вставкой минифицированного кода.
 
