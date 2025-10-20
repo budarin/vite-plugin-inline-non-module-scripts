@@ -1,6 +1,6 @@
 # Vite Plugin Inline Non-Module Scripts
 
-Vite плагин для автоматической обработки не-модульных JavaScript скриптов с инлайн-вставкой минифицированного кода.
+Vite плагин для автоматической обработки не-модульных JavaScript скриптов (включая инлайн-скрипты) с инлайн-вставкой минифицированного кода.
 
 ## Проблема
 
@@ -25,6 +25,7 @@ Vite по умолчанию **не обрабатывает** обычные Ja
 - ✅ **В dev режиме**: скрипты доступны по оригинальным путям
 - ✅ **В prod режиме**: скрипты минифицируются и инлайнятся в HTML
 - ✅ **Автоматическое обнаружение**: находит все `<script>` теги без `type="module"`
+- ✅ **Поддержка инлайн-скриптов**: обрабатывает скрипты с кодом прямо в теге
 - ✅ **Исключение внешних скриптов**: игнорирует CDN и внешние ссылки
 
 ## 📦 Установка
@@ -120,6 +121,10 @@ vitePluginInlineNonModuleScripts({ minify: true });
     </head>
     <body>
         <script src="/src/ui/helpers/splash-screen/splash.js"></script>
+        <script>
+            console.log('inline script');
+            const config = { apiUrl: 'https://api.example.com' };
+        </script>
         <script type="module" src="/src/main.js"></script>
     </body>
 </html>
@@ -138,6 +143,10 @@ vitePluginInlineNonModuleScripts({ minify: true });
             console.log('Hello from minified script!');
             window.appConfig = { version: '1.0.0', debug: false };
         </script>
+        <script>
+            console.log('inline script');
+            const config = { apiUrl: 'https://api.example.com' };
+        </script>
         <script type="module" src="/assets/main-abc123.js"></script>
     </body>
 </html>
@@ -147,10 +156,10 @@ vitePluginInlineNonModuleScripts({ minify: true });
 
 Плагин находит и обрабатывает скрипты, которые:
 
-- ✅ Имеют атрибут `src`
+- ✅ Имеют атрибут `src` ИЛИ являются инлайн-скриптами
 - ✅ НЕ имеют `type="module"`
 - ✅ НЕ являются внешними (не начинаются с `http://`, `https://`, `//`)
-- ✅ Являются локальными файлами
+- ✅ Являются локальными файлами или содержат код прямо в теге
 
 ### Примеры
 
@@ -159,14 +168,15 @@ vitePluginInlineNonModuleScripts({ minify: true });
 <script src="/src/utils/helper.js"></script>
 <script src="./local-script.js"></script>
 <script src="assets/script.js" defer></script>
+<script>
+    console.log('inline script');
+    const config = { apiUrl: 'https://api.example.com' };
+</script>
 
 <!-- ❌ НЕ обрабатывается -->
 <script type="module" src="/src/main.js"></script>
 <script src="https://cdn.example.com/script.js"></script>
 <script src="//cdn.example.com/script.js"></script>
-<script>
-    console.log('inline script');
-</script>
 ```
 
 ## 📄 Лицензия

@@ -1,14 +1,26 @@
-# Архитектура плагина non-module-script-processor
+# Архитектура плагина vite-plugin-inline-non-module-scripts
 
 ## Задача плагина
 
-Плагин обрабатывает non-module JavaScript скрипты, которые не обрабатываются Vite/Rolldown автоматически. Для каждого такого скрипта:
+Плагин обрабатывает non-module JavaScript скрипты, которые не обрабатываются Vite/Rolldown автоматически. Поддерживает два типа скриптов:
+
+### Скрипты с src атрибутом:
 
 1. **Читает содержимое** скрипта из файла
 2. **Опционально минифицирует** через встроенную минификацию Vite (если `minify: true`)
 3. **Заменяет ссылки на инлайн-скрипты** с содержимым (минифицированным или оригинальным)
-4. **НЕ создает файлы** в dist/assets (временные файлы удаляются)
-5. **НЕ добавляет записи** в манифест
+
+### Инлайн-скрипты:
+
+1. **Извлекает содержимое** прямо из тега `<script>`
+2. **Опционально минифицирует** через виртуальные модули
+3. **Заменяет содержимое** на минифицированное
+
+**Общие принципы:**
+
+- **НЕ создает файлы** в dist/assets (временные файлы удаляются)
+- **НЕ добавляет записи** в манифест
+- **Сохраняет все атрибуты** кроме `src`
 
 ## Ключевое решение: Два режима работы
 
@@ -48,8 +60,16 @@ resolveId(id) {
 
 load(id) {
     if (id.startsWith(virtualModulePrefix)) {
+        // Если это инлайн-скрипт (начинается с inline-script-)
+        if (id.includes('inline-script-')) {
+            // Находим соответствующий скрипт по virtualId
+            const script = scriptData.find(s => s.virtualId === id);
+            return script?.content || '';
+        } else {
+            // Обычный скрипт с файлом
         const scriptPath = id.slice(virtualModulePrefix.length);
         return readFileSync(scriptPath, 'utf-8');
+        }
     }
     return null;
 }
@@ -57,7 +77,19 @@ load(id) {
 
 ### 2. Поиск скриптов в buildStart
 
-В хуке `buildStart` находим все non-module скрипты и обрабатываем их в зависимости от режима:
+В хуке `buildStart` находим все non-module скрипты (с src и инлайн) и обрабатываем их в зависимости от режима:
+
+#### Регулярные выражения для поиска:
+
+```typescript
+// Скрипты с src атрибутом
+const SCRIPT_WITH_SRC_REGEX =
+    /<script(?![^>]*type\s*=\s*["']module["'])[^>]*\ssrc\s*=\s*["']([^"']+)["'][^>]*><\/script>/gi;
+
+// Инлайн-скрипты (без src)
+const INLINE_SCRIPT_REGEX =
+    /<script(?![^>]*type\s*=\s*["']module["'])(?![^>]*\ssrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
+```
 
 ```typescript
 buildStart() {
@@ -65,21 +97,37 @@ buildStart() {
     const htmlContent = readFileSync(htmlPath, 'utf-8');
     const foundScripts = findNonModuleScripts(htmlContent);
 
-    if (minify) {
-        // Режим с минификацией: эмитим chunks
     for (const script of foundScripts) {
+        if (script.isInline) {
+            // Инлайн-скрипты
+            if (shouldMinify) {
+                // Создаем виртуальный модуль для минификации
+                const virtualId = virtualModulePrefix + 'inline-script-' + uniqueId;
+                const chunkId = this.emitFile({
+                    type: 'chunk',
+                    id: virtualId,
+                    name: 'inline-script',
+                });
+                script.chunkId = chunkId;
+                script.virtualId = virtualId;
+            } else {
+                // Без минификации - используем содержимое как есть
+                script.minifiedContent = script.content;
+            }
+        } else {
+            // Скрипты с src
+            if (shouldMinify) {
         const virtualId = virtualModulePrefix + script.fullPath;
         const chunkId = this.emitFile({
             type: 'chunk',
-                id: virtualId,
-                name: path.basename(script.fullPath).replace('.js', ''),
-            });
-        }
-    } else {
-        // Режим без минификации: читаем оригинальное содержимое
-        for (const script of foundScripts) {
-            const scriptContent = readFileSync(script.fullPath, 'utf-8');
-            script.minifiedContent = scriptContent;
+                    id: virtualId,
+                    name: path.basename(script.fullPath).replace('.js', ''),
+                });
+                script.chunkId = chunkId;
+            } else {
+                const scriptContent = readFileSync(script.fullPath, 'utf-8');
+                script.minifiedContent = scriptContent;
+            }
         }
     }
 }
@@ -115,22 +163,45 @@ generateBundle() {
 
 ```typescript
 writeBundle() {
-    // Читаем минифицированное содержимое
-    for (const script of scriptData) {
-        const filePath = path.resolve(process.cwd(), 'dist', script.fileName);
-        const minifiedContent = readFileSync(filePath, 'utf-8');
+    if (shouldMinify) {
+        // Читаем минифицированное содержимое из созданных файлов
+        for (const script of scriptData) {
+            if (script.fileName) {
+                const filePath = getDistPath(script.fileName);
+                const minifiedContent = readFileSync(filePath, 'utf-8');
 
-        // Удаляем временный файл
-        unlinkSync(filePath);
+                // Удаляем временный файл
+                unlinkSync(filePath);
 
-        script.minifiedContent = minifiedContent;
+                script.minifiedContent = minifiedContent;
+            }
+        }
     }
+    // Если минификация отключена, содержимое уже прочитано в buildStart
 
     // Заменяем теги на инлайн-скрипты
     for (const script of scriptData) {
-        const attributes = extractAttributes(script.original);
-        const replacement = `<script${attributes}>${script.minifiedContent}</script>`;
-        htmlContent = htmlContent.replace(script.original, replacement);
+        if (script.minifiedContent) {
+            if (script.isInline) {
+                // Для инлайн-скриптов извлекаем атрибуты и заменяем содержимое
+                const attributes = script.original
+                    .replace(/<script\s*/, '')
+                    .replace(/>[\s\S]*<\/script>$/, '');
+
+                const attributesStr = attributes.trim() ? ` ${attributes.trim()}` : '';
+                const replacement = `<script${attributesStr}>${script.minifiedContent}</script>`;
+                htmlContent = htmlContent.replace(script.original, replacement);
+            } else {
+                // Для скриптов с src - извлекаем атрибуты кроме src
+                const attributes = script.original
+                    .replace(/src\s*=\s*["'][^"']*["']/gi, '')
+                    .replace(/<script\s*/, '')
+                    .replace(/\s*><\/script>$/, '');
+
+                const replacement = `<script${attributes}>${script.minifiedContent}</script>`;
+                htmlContent = htmlContent.replace(script.original, replacement);
+            }
+        }
     }
 }
 ```
@@ -236,8 +307,18 @@ SCRIPT_REGEX.lastIndex = 0; // Сброс для повторного испол
 - **Нет лишних файлов** в dist/assets
 - **Нет записей в манифесте**
 
+### Поддерживаемые типы скриптов
+
+- **Скрипты с src** - `<script src="/path/to/script.js"></script>`
+- **Инлайн-скрипты** - `<script>console.log('hello');</script>`
+- **С атрибутами** - `<script id="config" defer>...</script>`
+- **Исключает модули** - `<script type="module">` не обрабатывается
+- **Исключает внешние** - CDN и внешние ссылки игнорируются
+
 ### Общие преимущества
 
 - **Высокая производительность** благодаря оптимизациям
 - **Гибкость** - можно выбрать режим работы
 - **Будущеустойчивость** - работает с любыми версиями Vite
+- **Универсальность** - поддерживает оба типа скриптов
+- **Сохранение атрибутов** - все атрибуты кроме `src` сохраняются
