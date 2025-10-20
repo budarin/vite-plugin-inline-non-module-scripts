@@ -1,6 +1,6 @@
 {
     "name": "@budarin/vite-plugin-inline-non-module-scripts",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Vite plugin to inline non-module scripts",
     "keywords": [
         "vite",

@@ -120,7 +120,7 @@ vitePluginInlineNonModuleScripts({ minify: true });
         <title>My App</title>
     </head>
     <body>
-        <script src="/src/ui/helpers/splash-screen/splash.js"></script>
+        <script src="/src/script.js"></script>
         <script>
             console.log('inline script');
             const config = { apiUrl: 'https://api.example.com' };
@@ -140,8 +140,7 @@ vitePluginInlineNonModuleScripts({ minify: true });
     </head>
     <body>
         <script>
-            console.log('Hello from minified script!');
-            window.appConfig = { version: '1.0.0', debug: false };
+            // текст из /src/script.js
         </script>
         <script>
             console.log('inline script');
