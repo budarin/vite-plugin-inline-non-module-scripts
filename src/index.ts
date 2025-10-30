@@ -31,7 +31,7 @@ const INLINE_SCRIPT_REGEX =
 const getDistPath = (file: string) => path.resolve(process.cwd(), 'dist', file);
 const getSrcPath = (file: string) => path.resolve(process.cwd(), file);
 
-export function vitePluginInlineNonModuleScripts(
+export function inlineNonModuleScriptsPlugin(
     options: VitePluginInlineNonModuleScriptsOptions = {}
 ): Plugin {
     const { htmlPath = 'index.html', minify: minifyOption } = options;
@@ -318,4 +318,4 @@ export function vitePluginInlineNonModuleScripts(
     };
 }
 
-export default vitePluginInlineNonModuleScripts;
+export default inlineNonModuleScriptsPlugin;

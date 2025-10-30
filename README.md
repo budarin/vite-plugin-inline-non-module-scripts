@@ -45,10 +45,10 @@ yarn add @budarin/vite-plugin-inline-non-module-scripts
 ```typescript
 // vite.config.ts
 import { defineConfig } from 'vite';
-import { vitePluginInlineNonModuleScripts } from '@budarin/vite-plugin-inline-non-module-scripts';
+import { inlineNonModuleScriptsPlugin } from '@budarin/vite-plugin-inline-non-module-scripts';
 
 export default defineConfig({
-    plugins: [vitePluginInlineNonModuleScripts()],
+    plugins: [inlineNonModuleScriptsPlugin()],
 });
 ```
 
@@ -57,10 +57,10 @@ export default defineConfig({
 ```typescript
 // vite.config.ts
 import { defineConfig } from 'vite';
-import vitePluginInlineNonModuleScripts from '@budarin/vite-plugin-inline-non-module-scripts';
+import inlineNonModuleScriptsPlugin from '@budarin/vite-plugin-inline-non-module-scripts';
 
 export default defineConfig({
-    plugins: [vitePluginInlineNonModuleScripts()],
+    plugins: [inlineNonModuleScriptsPlugin()],
 });
 ```
 
@@ -69,11 +69,11 @@ export default defineConfig({
 ```typescript
 // vite.config.ts
 import { defineConfig } from 'vite';
-import { vitePluginInlineNonModuleScripts } from '@budarin/vite-plugin-inline-non-module-scripts';
+import { inlineNonModuleScriptsPlugin } from '@budarin/vite-plugin-inline-non-module-scripts';
 
 export default defineConfig({
     plugins: [
-        vitePluginInlineNonModuleScripts({
+        inlineNonModuleScriptsPlugin({
             minify: true, // Включить минификацию (по умолчанию: false)
             htmlPath: 'src/index.html', // Путь к HTML файлу (по умолчанию: 'index.html')
         }),
@@ -102,13 +102,13 @@ interface VitePluginInlineNonModuleScriptsOptions {
 
 ```typescript
 // Пример 1: Явно отключить минификацию
-vitePluginInlineNonModuleScripts({ minify: false });
+inlineNonModuleScriptsPlugin({ minify: false });
 
 // Пример 2: Использовать настройку из конфига Vite
-vitePluginInlineNonModuleScripts(); // Следует build.minify из vite.config.ts
+inlineNonModuleScriptsPlugin(); // Следует build.minify из vite.config.ts
 
 // Пример 3: Явно включить минификацию
-vitePluginInlineNonModuleScripts({ minify: true });
+inlineNonModuleScriptsPlugin({ minify: true });
 ```
 
 ### До обработки
