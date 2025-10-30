@@ -110,6 +110,7 @@ export function inlineNonModuleScriptsPlugin(
     return {
         name: 'vite-plugin-inline-non-module-scripts',
         apply: 'build',
+        enforce: 'pre',
 
         configResolved(config) {
             // Читаем настройку minify из конфига Vite
