@@ -14,6 +14,12 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "type": "module",
+    "dependencies": {
+        "cheerio": "^1.1.2"
+    },
+    "peerDependencies": {
+        "vite": "^7"
+    },
     "devDependencies": {
         "@types/node": "^24.9.2",
         "prettier": "^3.6.2",
