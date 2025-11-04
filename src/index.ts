@@ -61,7 +61,7 @@ export function inlineNonModuleScriptsPlugin(
         apply: 'build',
         enforce: 'pre',
 
-        configResolved(config) {
+        configResolved(config: any) {
             resolvedConfig = config;
         },
 
@@ -175,14 +175,18 @@ export function inlineNonModuleScriptsPlugin(
             }
         },
 
-        // collect minified code from bundle
+        // collect minified code from bundle and remove chunks
         generateBundle(_options: any, bundle: any) {
             for (const [src, refId] of srcToRefId.entries()) {
                 try {
                     const fileName = this.getFileName(refId);
                     const chunk = bundle[fileName];
                     const code = chunk && (chunk.code || chunk.source);
-                    if (typeof code === 'string') srcToMinified.set(src, code);
+                    if (typeof code === 'string') {
+                        srcToMinified.set(src, code);
+                        // Удаляем чанк из bundle, чтобы файл не создавался
+                        delete bundle[fileName];
+                    }
                 } catch {}
             }
         },
