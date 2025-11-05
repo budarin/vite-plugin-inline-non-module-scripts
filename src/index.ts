@@ -206,6 +206,7 @@ export function inlineNonModuleScriptsPlugin(
                 if (!min) return;
                 $el.text(min);
                 $el.removeAttr('data-inline-src');
+                $el.attr('type', 'text/javascript');
                 if (debug) console.log('[inline-nm] post-minified', src);
             });
             return $.html();
